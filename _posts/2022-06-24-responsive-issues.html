@@ -1,0 +1,31 @@
+---
+layout: post
+title:  "Responsive issues"
+date:   2022-06-24 17:01:00 +0200
+categories: responsive
+---
+
+<style type="text/css">
+  .mobile_only {
+    display: none;
+  }
+
+  .low_contrast_text {
+    background-color: #ddd;
+    color: #fff;
+  }
+
+  @media screen and (max-width: 480px) {
+    .mobile_only {
+      display: inline
+    }
+  }
+</style>
+
+<p>
+  This paragraph will always be displayed in all widths, but the next paragraph will only appear when the device is up to 480px wide.
+</p>
+
+<p class="mobile_only">
+  This paragraph will only appear on narrow screens, and it contains an accessibility error because <span class="low_contrast_text">some text is hard to read as it has low contrast</span>.
+</p>

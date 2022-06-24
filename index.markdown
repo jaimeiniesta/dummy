@@ -4,4 +4,8 @@
 
 layout: home
 ---
-This is the home content
+Welcome!
+
+This is just a test site intentionally full of HTML and accessibility issues, designed to be used as an example test site.
+
+Check [rocketvalidator.com](https://rocketvalidator.com) for more information.
