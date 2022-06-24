@@ -29,6 +29,7 @@ github_username:  rocketvalidator
 
 # Build settings
 theme: minima
+google_analytics: "plausible"
 plugins:
   - jekyll-feed
 
