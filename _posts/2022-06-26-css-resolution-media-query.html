@@ -1,0 +1,27 @@
+---
+layout: post
+title:  "CSS resolution media query"
+date:   2022-06-24 17:01:00 +0200
+categories: css resolution media-queries
+---
+
+<style type="text/css">
+  #example {
+    font-size: 1.2em;
+    text-align: center;
+    margin: 0.2em 0;
+    padding: 2em 0;
+    border: 2px solid indigo;
+    border-radius: 10pt
+  }
+  
+  @media (max-resolution: 150dpi) {
+    #example {
+      background: yellow;
+    }
+  }
+</style>
+
+<p>An example taken from <a href="MDN">https://developer.mozilla.org/en-US/docs/Web/CSS/@media/resolution</a></p>
+
+<p id="example">This box will have a yellow background if the resolution is less than 150 DPI.</p>
