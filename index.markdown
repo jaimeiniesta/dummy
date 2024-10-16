@@ -4,7 +4,7 @@
 
 layout: home
 ---
-Welcome to our awesomedummy site!
+Welcome to our awesome dummy site!
 
 This is just a test site intentionally full of HTML and accessibility issues, designed to be used as an example test site.
 
