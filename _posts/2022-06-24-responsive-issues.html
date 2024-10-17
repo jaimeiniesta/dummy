@@ -10,22 +10,54 @@ categories: responsive
     display: none;
   }
 
+  .large_only {
+    display: none;
+  }
+
   .low_contrast_text {
     background-color: #ddd;
     color: #fff;
   }
 
-  @media screen and (max-width: 480px) {
+
+  .picture {
+    width: 240px;
+    margin: 10px;
+    border-radius: 10px;
+    box-shadow: 4px 4px 10px rgba(0, 0, 0, 0.2);
+  }
+
+  @media screen and (max-width: 640px) {
     .mobile_only {
+      display: inline
+    }
+  }
+
+  @media screen and (min-width: 1024px) {
+    .large_only {
       display: inline
     }
   }
 </style>
 
 <p>
-  This paragraph will always be displayed in all widths, but the next paragraph will only appear when the device is up to 480px wide.
+  This paragraph will always be displayed in all widths, but the next paragraphs appear on specific screen sizes.
 </p>
 
 <p class="mobile_only">
   This paragraph will only appear on narrow screens, and it contains an accessibility error because <span class="low_contrast_text">some text is hard to read as it has low contrast</span>.
 </p>
+
+<p class="mobile_only low_contrast_text">
+  Another paragrap that appears on mobile with low contrast text.
+</p>
+
+<p class="large_only low_contrast_text">
+  This paragraph with low contrast text will only appear on wide screens.
+</p>
+
+<p class="large_only">
+  <img src="/assets/img/goldfish.jpg" class="picture">
+  <img src="/assets/img/chicken.png" class="picture">
+</p>
+
