@@ -6,6 +6,12 @@ categories: element-internals
 ---
 
 <style type="text/css">
+  .axe-413 .case {
+    border-left: 4px solid #ccc;
+    padding-left: 1rem;
+    margin-bottom: 2rem;
+  }
+
   .axe-413 .expect {
     background: #f2f2f2;
     padding: .6rem .8rem;
@@ -22,126 +28,245 @@ categories: element-internals
   }
 
   .axe-413 rv-progress,
-  .axe-413 rv-progress-private,
-  .axe-413 rv-badge {
+  .axe-413 rv-progress-private {
     display: block;
     height: 1rem;
     background: #d8d8d8;
     border: 1px solid #666;
   }
 
-  .axe-413 rv-checkbox {
-    display: inline-block;
-    width: 1rem;
-    height: 1rem;
-    border: 2px solid #333;
-    vertical-align: -2px;
-    cursor: pointer;
-  }
-
-  .axe-413 rv-checkbox:state(checked) {
-    background: #333;
+  .axe-413 .case img {
+    background: #d8d8d8;
+    border: 1px solid #666;
   }
 </style>
 
 <div class="axe-413">
 
 <p>
-  Each section below is a single behaviour that changed between axe-core 4.12 and
-  4.13. Scan this page with both versions and diff the results.
+  Seven behaviours that changed between axe-core 4.12.1 and 4.13.0. Each one is a
+  pair: the element that changed, and a control element that behaves the same in
+  both versions. Scan this page with both engines and diff the results — the
+  control tells you the difference is real and not an artefact of the page.
 </p>
 
-<h2>1. Element Internals role, with aria-label on the host</h2>
+<div class="case" id="case-1">
+<h2>1. Axe now reads the role set through Element Internals</h2>
 
-<rv-progress aria-label="File upload progress"></rv-progress>
+<p>
+  A custom element can declare its own ARIA role in JavaScript, without any
+  attribute in the HTML:
+</p>
 
-<p class="expect"><b>4.12:</b> <code>aria-prohibited-attr</code> violation —
-aria-label is reported as not allowed, because axe cannot see the
-<code>progressbar</code> role set through Element Internals.<br>
-<b>4.13:</b> passes. This is axe-core issue #4259.</p>
+<pre><code>this._internals = this.attachInternals();
+this._internals.role = 'progressbar';</code></pre>
 
-<h2>2. Same component, internals held in a private class field</h2>
+<p>
+  4.12 could not see that role, so it had nothing to validate attributes against.
+  4.13 reads it, and can now tell that <code>aria-checked</code> is meaningless on
+  a progress bar.
+</p>
 
-<rv-progress-private aria-label="Download progress"></rv-progress-private>
-
-<p class="expect"><b>4.12 and 4.13:</b> still an <code>aria-prohibited-attr</code>
-violation. The component stores its internals in a <code>#internals</code> private
-field, which nothing outside the class can read. Include this one — it is the
-control case that shows the limit of the feature.</p>
-
-<h2>3. Attribute that is invalid for the internals role</h2>
+<p><b>Changed:</b> internals stored on <code>this._internals</code></p>
 
 <rv-progress aria-label="Sync progress" aria-checked="true"></rv-progress>
 
-<p class="expect"><b>4.12:</b> not flagged. Axe sees no role, so it has nothing to
-validate the attribute against.<br>
-<b>4.13:</b> <code>aria-allowed-attr</code> violation — aria-checked is not
-allowed on <code>progressbar</code>. A genuine issue that 4.12 missed.</p>
+<p><b>Control:</b> same component, internals stored in a
+<code>#internals</code> private class field</p>
 
-<h2>4. Form-associated custom element with a real label</h2>
+<rv-progress-private aria-label="Backup progress" aria-checked="true"></rv-progress-private>
 
-<label for="terms">I accept the terms</label>
-<rv-checkbox id="terms"></rv-checkbox>
+<p class="expect">
+<b>4.12.1:</b> both report <code>aria-allowed-attr</code> as needs review.<br>
+<b>4.13.0:</b> the first one becomes an <code>aria-allowed-attr</code> violation.
+The control stays as needs review.
+</p>
 
-<p class="expect"><b>4.13:</b> the accessible name resolves through
-<code>internals.labels</code>. Nothing should be reported here. Useful as a
-negative control.</p>
+<p>
+  Both elements also carry an <code>aria-prohibited-attr</code> violation in 4.12
+  that disappears in 4.13. That is case 2 below, not this one.
+</p>
 
-<h2>5. role="image" without an accessible name</h2>
+<p>
+  Axe looks for the internals object under the property names
+  <code>_internals</code>, <code>internals</code> and <code>internals_</code>, and
+  under symbols named <code>internals</code> and <code>privateInternals</code>. A
+  real <code>#</code> private field is unreachable from outside the class, so the
+  control is invisible to axe by design. Write components with a readable
+  internals property and you get the extra checking for free.
+</p>
+</div>
+
+<div class="case" id="case-2">
+<h2>2. aria-label on a custom element is no longer prohibited</h2>
+
+<p>
+  4.12 treated any unknown element as one that cannot carry its own accessible
+  name. That produced a false positive on every custom element with an
+  <code>aria-label</code>. 4.13 exempts custom elements from the rule.
+</p>
+
+<p><b>Changed:</b> custom element with only an <code>aria-label</code></p>
+
+<rv-progress aria-label="File upload progress"></rv-progress>
+
+<p><b>Control:</b> the private-internals version, same markup</p>
+
+<rv-progress-private aria-label="Download progress"></rv-progress-private>
+
+<p class="expect">
+<b>4.12.1:</b> both are <code>aria-prohibited-attr</code> violations.<br>
+<b>4.13.0:</b> both are clean.
+</p>
+
+<p>
+  The control is clean too, which is the point: the exemption is granted by the
+  element <em>name</em> being a valid custom element name, not by axe managing to
+  read the internals. This fix and the one in case 1 are independent.
+</p>
+</div>
+
+<div class="case" id="case-3">
+<h2>3. role="image" is now recognised as a synonym of role="img"</h2>
+
+<p><b>Changed:</b> <code>role="image"</code> with no accessible name</p>
 
 <div role="image"></div>
 
-<p class="expect"><b>4.12:</b> not flagged — the rule selector only matched
-<code>role="img"</code>.<br>
-<b>4.13:</b> <code>role-img-alt</code> violation. The selector now also matches
-<code>role="image"</code>, which browsers treat as equivalent.</p>
+<p><b>Control:</b> <code>role="img"</code> with no accessible name</p>
 
-<h2>6. Deprecated ARIA attribute</h2>
+<div role="img"></div>
+
+<p class="expect">
+<b>4.12.1:</b> the first is an <code>aria-roles</code> violation (unknown role).
+The control is a <code>role-img-alt</code> violation.<br>
+<b>4.13.0:</b> both are <code>role-img-alt</code> violations.
+</p>
+
+<p>
+  Nothing was fixed here and nothing was broken — the same element is reported
+  under a different rule. Browsers map <code>image</code> to <code>img</code>, so
+  the useful message is the missing accessible name, not the spelling of the role.
+</p>
+</div>
+
+<div class="case" id="case-4">
+<h2>4. Deprecated drag-and-drop attributes are flagged for review</h2>
+
+<p><b>Changed:</b> <code>aria-grabbed</code></p>
 
 <div aria-grabbed="false">Draggable card</div>
 
-<p class="expect"><b>4.12:</b> passes.<br>
-<b>4.13:</b> <code>aria-allowed-attr</code> needs-review item. Same applies to
-<code>aria-dropeffect</code>. Check this lands in the incomplete bucket, not in
-violations.</p>
+<p><b>Changed:</b> <code>aria-dropeffect</code></p>
 
-<h2>7. Whitespace alt on a presentational image</h2>
+<div aria-dropeffect="move">Drop zone here</div>
+
+<p class="expect">
+<b>4.12.1:</b> both are clean.<br>
+<b>4.13.0:</b> both are <code>aria-allowed-attr</code> needs-review items.
+</p>
+
+<p>
+  Both attributes were deprecated in ARIA 1.1 and no browser or screen reader
+  implements them. They land in needs review rather than violations because
+  removing them cannot break anything, but axe will not assert that on your behalf.
+</p>
+</div>
+
+<div class="case" id="case-5">
+<h2>5. A whitespace-only alt now counts as empty</h2>
+
+<p><b>Changed:</b> <code>alt=" "</code> — a single space</p>
 
 <img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
-     alt=" " role="presentation" width="1" height="1">
+     alt=" " role="presentation" width="60" height="24">
 
-<p class="expect"><b>4.12:</b> <code>image-alt</code> violation.<br>
-<b>4.13:</b> passes.</p>
+<p><b>Control:</b> <code>alt=""</code> — properly empty</p>
 
-<h2>8. Role on a summary outside details</h2>
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+     alt="" role="presentation" width="60" height="24">
 
-<summary role="button" tabindex="0">Standalone summary</summary>
+<p class="expect">
+<b>4.12.1:</b> the first is an <code>image-alt</code> violation. The control is
+clean.<br>
+<b>4.13.0:</b> the <code>image-alt</code> violation is gone. The control is still
+clean.
+</p>
 
-<p class="expect"><b>4.12:</b> <code>aria-allowed-role</code> issue.<br>
-<b>4.13:</b> passes.</p>
+<p>
+  The first image also reports <code>aria-allowed-role</code> in <em>both</em>
+  versions, because <code>role="presentation"</code> is only allowed on an image
+  whose <code>alt</code> attribute is literally empty. That second violation is
+  not part of this change — ignore it when diffing, or fix the markup by removing
+  the space.
+</p>
+</div>
 
-<h2>9. Named label element</h2>
+<div class="case" id="case-6">
+<h2>6. A label element can no longer carry its own accessible name</h2>
+
+<p>
+  A <code>&lt;label&gt;</code> names the field it points at. Giving the label
+  itself an <code>aria-label</code> either does nothing or silently replaces the
+  visible text, so 4.13 reports it.
+</p>
+
+<p><b>Changed:</b> label with visible text and an <code>aria-label</code></p>
 
 <label aria-label="Email address" for="email">Email</label>
 <input id="email" type="email">
 
-<p class="expect"><b>4.12:</b> passes.<br>
-<b>4.13:</b> <code>aria-prohibited-attr</code> violation — <code>label</code> and
-<code>body</code> can no longer carry an accessible name.</p>
+<p><b>Changed:</b> same, but with no visible text</p>
 
-<h2>10. Section with a non-landmark role</h2>
+<label aria-label="Postal code" for="zip"></label>
+<input id="zip" type="text">
+
+<p class="expect">
+<b>4.12.1:</b> both are clean.<br>
+<b>4.13.0:</b> the first is an <code>aria-prohibited-attr</code> needs-review item,
+the second is an <code>aria-prohibited-attr</code> violation.
+</p>
+
+<p>
+  The split is deliberate. When the label has visible text, something readable
+  reaches the user either way, so axe asks a human to look. When the label is
+  empty, the <code>aria-label</code> is the only content and it is being applied to
+  an element that cannot expose it, so axe calls it an error.
+</p>
+</div>
+
+<div class="case" id="case-7">
+<h2>7. A section with a non-landmark role is no longer a landmark</h2>
+
+<p><b>Changed:</b> two identical sections with <code>role="group"</code></p>
 
 <section role="group" aria-label="Filters">Filter controls</section>
 <section role="group" aria-label="Filters">More filter controls</section>
 
-<p class="expect"><b>4.12:</b> <code>landmark-unique</code> issue.<br>
-<b>4.13:</b> passes — sections with a non-landmark role are no longer treated as
-landmarks.</p>
+<p><b>Control:</b> two identical sections with no role, which stay regions</p>
+
+<section aria-label="Sorting">Sort controls</section>
+<section aria-label="Sorting">More sort controls</section>
+
+<p class="expect">
+<b>4.12.1:</b> both pairs are <code>landmark-unique</code> violations.<br>
+<b>4.13.0:</b> the first pair is clean. The control is still a
+<code>landmark-unique</code> violation.
+</p>
+
+<p>
+  A <code>&lt;section&gt;</code> with an accessible name is a
+  <code>region</code> landmark, and two landmarks with the same role and the same
+  name are ambiguous. An explicit <code>role="group"</code> overrides the implicit
+  region, so the pair was never a landmark conflict to begin with. 4.12 counted it
+  anyway.
+</p>
+</div>
 
 </div>
 
 <script>
-// --- Visible to axe: internals stored on a recognised property name ---
+// Internals stored on a property name axe knows how to look for.
 class RvProgress extends HTMLElement {
   constructor() {
     super();
@@ -154,7 +279,8 @@ class RvProgress extends HTMLElement {
 }
 customElements.define('rv-progress', RvProgress);
 
-// --- Invisible to axe: true private class field ---
+// Same component, but the internals live in a true private class field.
+// Nothing outside the class can reach them, axe included.
 class RvProgressPrivate extends HTMLElement {
   #internals;
   constructor() {
@@ -162,35 +288,9 @@ class RvProgressPrivate extends HTMLElement {
     this.#internals = this.attachInternals();
     this.#internals.role = 'progressbar';
     this.#internals.ariaValueNow = '75';
+    this.#internals.ariaValueMin = '0';
+    this.#internals.ariaValueMax = '100';
   }
 }
 customElements.define('rv-progress-private', RvProgressPrivate);
-
-// --- Form-associated custom element ---
-class RvCheckbox extends HTMLElement {
-  static formAssociated = true;
-
-  constructor() {
-    super();
-    this._internals = this.attachInternals();
-    this._internals.role = 'checkbox';
-    this._internals.ariaChecked = 'false';
-  }
-
-  connectedCallback() {
-    this.tabIndex = 0;
-    this.addEventListener('click', () => this.toggle());
-    this.addEventListener('keydown', e => {
-      if (e.key === ' ') { e.preventDefault(); this.toggle(); }
-    });
-  }
-
-  toggle() {
-    const checked = this._internals.ariaChecked !== 'true';
-    this._internals.ariaChecked = String(checked);
-    this._internals.states[checked ? 'add' : 'delete']('checked');
-    this._internals.setFormValue(checked ? 'on' : null);
-  }
-}
-customElements.define('rv-checkbox', RvCheckbox);
 </script>
