@@ -1,0 +1,196 @@
+---
+layout: post
+title:  "Element internals"
+date:   2026-08-14 11:53:00 +0200
+categories: element-internals
+---
+
+<style type="text/css">
+  .axe-413 .expect {
+    background: #f2f2f2;
+    padding: .6rem .8rem;
+    font-size: .9rem;
+  }
+
+  .axe-413 .expect b {
+    font-weight: 600;
+  }
+
+  .axe-413 code {
+    background: #f2f2f2;
+    padding: .1em .3em;
+  }
+
+  .axe-413 rv-progress,
+  .axe-413 rv-progress-private,
+  .axe-413 rv-badge {
+    display: block;
+    height: 1rem;
+    background: #d8d8d8;
+    border: 1px solid #666;
+  }
+
+  .axe-413 rv-checkbox {
+    display: inline-block;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid #333;
+    vertical-align: -2px;
+    cursor: pointer;
+  }
+
+  .axe-413 rv-checkbox:state(checked) {
+    background: #333;
+  }
+</style>
+
+<div class="axe-413">
+
+<p>
+  Each section below is a single behaviour that changed between axe-core 4.12 and
+  4.13. Scan this page with both versions and diff the results.
+</p>
+
+<h2>1. Element Internals role, with aria-label on the host</h2>
+
+<rv-progress aria-label="File upload progress"></rv-progress>
+
+<p class="expect"><b>4.12:</b> <code>aria-prohibited-attr</code> violation —
+aria-label is reported as not allowed, because axe cannot see the
+<code>progressbar</code> role set through Element Internals.<br>
+<b>4.13:</b> passes. This is axe-core issue #4259.</p>
+
+<h2>2. Same component, internals held in a private class field</h2>
+
+<rv-progress-private aria-label="Download progress"></rv-progress-private>
+
+<p class="expect"><b>4.12 and 4.13:</b> still an <code>aria-prohibited-attr</code>
+violation. The component stores its internals in a <code>#internals</code> private
+field, which nothing outside the class can read. Include this one — it is the
+control case that shows the limit of the feature.</p>
+
+<h2>3. Attribute that is invalid for the internals role</h2>
+
+<rv-progress aria-label="Sync progress" aria-checked="true"></rv-progress>
+
+<p class="expect"><b>4.12:</b> not flagged. Axe sees no role, so it has nothing to
+validate the attribute against.<br>
+<b>4.13:</b> <code>aria-allowed-attr</code> violation — aria-checked is not
+allowed on <code>progressbar</code>. A genuine issue that 4.12 missed.</p>
+
+<h2>4. Form-associated custom element with a real label</h2>
+
+<label for="terms">I accept the terms</label>
+<rv-checkbox id="terms"></rv-checkbox>
+
+<p class="expect"><b>4.13:</b> the accessible name resolves through
+<code>internals.labels</code>. Nothing should be reported here. Useful as a
+negative control.</p>
+
+<h2>5. role="image" without an accessible name</h2>
+
+<div role="image"></div>
+
+<p class="expect"><b>4.12:</b> not flagged — the rule selector only matched
+<code>role="img"</code>.<br>
+<b>4.13:</b> <code>role-img-alt</code> violation. The selector now also matches
+<code>role="image"</code>, which browsers treat as equivalent.</p>
+
+<h2>6. Deprecated ARIA attribute</h2>
+
+<div aria-grabbed="false">Draggable card</div>
+
+<p class="expect"><b>4.12:</b> passes.<br>
+<b>4.13:</b> <code>aria-allowed-attr</code> needs-review item. Same applies to
+<code>aria-dropeffect</code>. Check this lands in the incomplete bucket, not in
+violations.</p>
+
+<h2>7. Whitespace alt on a presentational image</h2>
+
+<img src="data:image/gif;base64,R0lGODlhAQABAIAAAP///wAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw=="
+     alt=" " role="presentation" width="1" height="1">
+
+<p class="expect"><b>4.12:</b> <code>image-alt</code> violation.<br>
+<b>4.13:</b> passes.</p>
+
+<h2>8. Role on a summary outside details</h2>
+
+<summary role="button" tabindex="0">Standalone summary</summary>
+
+<p class="expect"><b>4.12:</b> <code>aria-allowed-role</code> issue.<br>
+<b>4.13:</b> passes.</p>
+
+<h2>9. Named label element</h2>
+
+<label aria-label="Email address" for="email">Email</label>
+<input id="email" type="email">
+
+<p class="expect"><b>4.12:</b> passes.<br>
+<b>4.13:</b> <code>aria-prohibited-attr</code> violation — <code>label</code> and
+<code>body</code> can no longer carry an accessible name.</p>
+
+<h2>10. Section with a non-landmark role</h2>
+
+<section role="group" aria-label="Filters">Filter controls</section>
+<section role="group" aria-label="Filters">More filter controls</section>
+
+<p class="expect"><b>4.12:</b> <code>landmark-unique</code> issue.<br>
+<b>4.13:</b> passes — sections with a non-landmark role are no longer treated as
+landmarks.</p>
+
+</div>
+
+<script>
+// --- Visible to axe: internals stored on a recognised property name ---
+class RvProgress extends HTMLElement {
+  constructor() {
+    super();
+    this._internals = this.attachInternals();
+    this._internals.role = 'progressbar';
+    this._internals.ariaValueNow = '40';
+    this._internals.ariaValueMin = '0';
+    this._internals.ariaValueMax = '100';
+  }
+}
+customElements.define('rv-progress', RvProgress);
+
+// --- Invisible to axe: true private class field ---
+class RvProgressPrivate extends HTMLElement {
+  #internals;
+  constructor() {
+    super();
+    this.#internals = this.attachInternals();
+    this.#internals.role = 'progressbar';
+    this.#internals.ariaValueNow = '75';
+  }
+}
+customElements.define('rv-progress-private', RvProgressPrivate);
+
+// --- Form-associated custom element ---
+class RvCheckbox extends HTMLElement {
+  static formAssociated = true;
+
+  constructor() {
+    super();
+    this._internals = this.attachInternals();
+    this._internals.role = 'checkbox';
+    this._internals.ariaChecked = 'false';
+  }
+
+  connectedCallback() {
+    this.tabIndex = 0;
+    this.addEventListener('click', () => this.toggle());
+    this.addEventListener('keydown', e => {
+      if (e.key === ' ') { e.preventDefault(); this.toggle(); }
+    });
+  }
+
+  toggle() {
+    const checked = this._internals.ariaChecked !== 'true';
+    this._internals.ariaChecked = String(checked);
+    this._internals.states[checked ? 'add' : 'delete']('checked');
+    this._internals.setFormValue(checked ? 'on' : null);
+  }
+}
+customElements.define('rv-checkbox', RvCheckbox);
+</script>
