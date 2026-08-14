@@ -28,11 +28,31 @@ categories: element-internals
   }
 
   .axe-413 rv-progress,
-  .axe-413 rv-progress-private {
-    display: block;
-    height: 1rem;
+  .axe-413 rv-progress-private,
+  .axe-413 rv-checkbox,
+  .axe-413 rv-heading,
+  .axe-413 rv-textbox,
+  .axe-413 rv-tab,
+  .axe-413 rv-slider,
+  .axe-413 rv-combobox {
+    display: inline-block;
+    min-width: 6rem;
+    min-height: 1rem;
     background: #d8d8d8;
     border: 1px solid #666;
+    vertical-align: middle;
+  }
+
+  .axe-413 rv-btn,
+  .axe-413 div[role="button"] {
+    display: inline-block;
+    padding: .2rem .5rem;
+    background: #d8d8d8;
+    border: 1px solid #666;
+  }
+
+  .axe-413 .combos li {
+    margin-bottom: .4rem;
   }
 
   .axe-413 .case img {
@@ -48,6 +68,8 @@ categories: element-internals
   pair: the element that changed, and a control element that behaves the same in
   both versions. Scan this page with both engines and diff the results — the
   control tells you the difference is real and not an artefact of the page.
+  Case 1, Element Internals, is the headline change and is broken into six
+  sub-cases; the rest are single pairs.
 </p>
 
 <div class="case" id="case-1">
@@ -62,39 +84,187 @@ categories: element-internals
 this._internals.role = 'progressbar';</code></pre>
 
 <p>
-  4.12 could not see that role, so it had nothing to validate attributes against.
-  4.13 reads it, and can now tell that <code>aria-checked</code> is meaningless on
-  a progress bar.
+  4.12 could not see that role. Faced with a custom element carrying ARIA
+  attributes, it had nothing to validate them against, so it filed the whole thing
+  under needs review. 4.13 reads the role and decides. This section has six
+  sub-cases, because this is the change worth exercising properly.
 </p>
 
-<p><b>Changed:</b> internals stored on <code>this._internals</code></p>
+<div id="case-1-1">
+<h3>1.1 The same attribute, opposite verdicts</h3>
 
-<rv-progress aria-label="Sync progress" aria-checked="true"></rv-progress>
+<p>
+  <code>aria-checked</code> is correct on a checkbox and meaningless on a progress
+  bar. Nothing in the HTML says which is which — only the internals do.
+</p>
 
-<p><b>Control:</b> same component, internals stored in a
-<code>#internals</code> private class field</p>
+<p><b>Correct:</b> internals role <code>checkbox</code></p>
 
-<rv-progress-private aria-label="Backup progress" aria-checked="true"></rv-progress-private>
+<rv-checkbox aria-checked="true"></rv-checkbox>
+
+<p><b>Wrong:</b> internals role <code>progressbar</code>, identical attribute</p>
+
+<rv-progress aria-checked="true"></rv-progress>
 
 <p class="expect">
-<b>4.12.1:</b> both report <code>aria-allowed-attr</code> as needs review.<br>
-<b>4.13.0:</b> the first one becomes an <code>aria-allowed-attr</code> violation.
-The control stays as needs review.
+<b>4.12.1:</b> both are <code>aria-allowed-attr</code> needs review. Same verdict
+for both, because 4.12 cannot tell them apart.<br>
+<b>4.13.0:</b> the checkbox is clean, the progress bar is an
+<code>aria-allowed-attr</code> violation.
+</p>
+</div>
+
+<div id="case-1-2">
+<h3>1.2 Five more combinations 4.12 could not judge</h3>
+
+<p>Each of these puts an attribute on a role that does not allow it.</p>
+
+<ul class="combos">
+<li><code>progressbar</code> + <code>aria-multiline</code>
+    <rv-progress aria-multiline="true"></rv-progress></li>
+<li><code>checkbox</code> + <code>aria-valuenow</code>
+    <rv-checkbox aria-valuenow="3"></rv-checkbox></li>
+<li><code>heading</code> + <code>aria-selected</code>
+    <rv-heading aria-selected="true">Section title</rv-heading></li>
+<li><code>textbox</code> + <code>aria-checked</code>
+    <rv-textbox aria-checked="true"></rv-textbox></li>
+<li><code>tab</code> + <code>aria-level</code>
+    <rv-tab aria-level="2">Overview</rv-tab></li>
+</ul>
+
+<p class="expect">
+<b>4.12.1:</b> all five are <code>aria-allowed-attr</code> needs review.<br>
+<b>4.13.0:</b> all five are <code>aria-allowed-attr</code> violations.
+</p>
+</div>
+
+<div id="case-1-3">
+<h3>1.3 The other direction: five false alarms that go away</h3>
+
+<p>
+  Here the attribute <em>is</em> allowed on the internals role. 4.12 still asked a
+  human to check, because it did not know the role. 4.13 confirms and says nothing.
+</p>
+
+<ul class="combos">
+<li><code>progressbar</code> + <code>aria-valuetext</code>
+    <rv-progress aria-valuetext="40 percent"></rv-progress></li>
+<li><code>heading</code> + <code>aria-level</code>
+    <rv-heading aria-level="2">Section title</rv-heading></li>
+<li><code>textbox</code> + <code>aria-multiline</code>
+    <rv-textbox aria-multiline="true"></rv-textbox></li>
+<li><code>slider</code> + <code>aria-orientation</code>
+    <rv-slider aria-orientation="vertical"></rv-slider></li>
+<li><code>combobox</code> + <code>aria-expanded</code>
+    <rv-combobox aria-expanded="false"></rv-combobox></li>
+</ul>
+
+<p class="expect">
+<b>4.12.1:</b> all five are <code>aria-allowed-attr</code> needs review.<br>
+<b>4.13.0:</b> all five are clean.
 </p>
 
 <p>
-  Both elements also carry an <code>aria-prohibited-attr</code> violation in 4.12
-  that disappears in 4.13. That is case 2 below, not this one.
+  On a site built out of web components this direction is the one you will notice.
+  Every custom element carrying a legitimate ARIA attribute stops generating a
+  manual-review item.
+</p>
+</div>
+
+<div id="case-1-4">
+<h3>1.4 Not only about ARIA attributes</h3>
+
+<p>
+  A button swallows its children in the accessibility tree, so putting a link
+  inside one hides the link. The rule that catches this needs to know the element
+  is a button.
+</p>
+
+<p><b>Changed:</b> internals role <code>button</code> wrapping a link</p>
+
+<rv-btn tabindex="0" aria-label="Play"><a href="#case-1-4">Inner link</a></rv-btn>
+
+<p><b>Control:</b> same structure with the role in an attribute</p>
+
+<div role="button" tabindex="0" aria-label="Play"><a href="#case-1-4">Inner link</a></div>
+
+<p class="expect">
+<b>4.12.1:</b> only the control is a <code>nested-interactive</code> violation.<br>
+<b>4.13.0:</b> both are.
 </p>
 
 <p>
-  Axe looks for the internals object under the property names
-  <code>_internals</code>, <code>internals</code> and <code>internals_</code>, and
-  under symbols named <code>internals</code> and <code>privateInternals</code>. A
-  real <code>#</code> private field is unreachable from outside the class, so the
-  control is invisible to axe by design. Write components with a readable
-  internals property and you get the extra checking for free.
+  4.12 also files an <code>aria-prohibited-attr</code> review item against the
+  custom element, for the <code>aria-label</code> it needs in order to have a name.
+  That is case 2 below.
 </p>
+</div>
+
+<div id="case-1-5">
+<h3>1.5 The limit: internals in a private field</h3>
+
+<p>
+  Axe finds the internals object by probing the property names
+  <code>_internals</code>, <code>internals</code> and <code>internals_</code>, plus
+  symbols named <code>internals</code> and <code>privateInternals</code>. A real
+  <code>#</code> private field is unreachable from outside the class, so none of
+  that works.
+</p>
+
+<p><b>Changed:</b> internals on <code>this._internals</code>, as in 1.1</p>
+
+<rv-progress aria-checked="false"></rv-progress>
+
+<p><b>Control:</b> same component, internals in <code>#internals</code></p>
+
+<rv-progress-private aria-checked="false"></rv-progress-private>
+
+<p class="expect">
+<b>4.12.1:</b> both are <code>aria-allowed-attr</code> needs review.<br>
+<b>4.13.0:</b> the first is a violation. The control stays as needs review, exactly
+where 4.12 left it.
+</p>
+
+<p>
+  Write your components with a readable internals property and the extra checking
+  comes for free. Hide it in a private field and axe treats the component as a
+  black box.
+</p>
+</div>
+
+<div id="case-1-6">
+<h3>1.6 What this does not enable</h3>
+
+<p>
+  Most axe rules pick their candidates with a CSS selector such as
+  <code>[role="progressbar"]</code> or <code>[role]</code>. A role that exists only
+  in the internals never matches those selectors, so the element is never handed to
+  the rule at all.
+</p>
+
+<p><b>Internals role, no accessible name:</b></p>
+
+<rv-progress></rv-progress>
+
+<p><b>Control:</b> the same role and the same omission, written as an attribute</p>
+
+<div role="progressbar" aria-valuenow="40"></div>
+
+<p class="expect">
+<b>4.12.1 and 4.13.0 alike:</b> the control is an
+<code>aria-progressbar-name</code> violation. The custom element is reported by
+neither version.
+</p>
+
+<p>
+  So the reach of this feature is narrow: it changes the outcome of
+  <code>aria-allowed-attr</code>, <code>aria-prohibited-attr</code>,
+  <code>aria-conditional-attr</code> and <code>nested-interactive</code>, the rules
+  whose selector is universal. Missing names, missing required attributes, missing
+  required children and duplicate landmarks all stay invisible when the role lives
+  in the internals.
+</p>
+</div>
 </div>
 
 <div class="case" id="case-2">
@@ -266,21 +436,34 @@ the second is an <code>aria-prohibited-attr</code> violation.
 </div>
 
 <script>
-// Internals stored on a property name axe knows how to look for.
-class RvProgress extends HTMLElement {
-  constructor() {
-    super();
-    this._internals = this.attachInternals();
-    this._internals.role = 'progressbar';
-    this._internals.ariaValueNow = '40';
-    this._internals.ariaValueMin = '0';
-    this._internals.ariaValueMax = '100';
-  }
+// Every component below stores its internals on `this._internals`, one of the
+// property names axe knows how to probe.
+function defineComponent(tag, setup) {
+  customElements.define(tag, class extends HTMLElement {
+    constructor() {
+      super();
+      this._internals = this.attachInternals();
+      setup(this._internals);
+    }
+  });
 }
-customElements.define('rv-progress', RvProgress);
 
-// Same component, but the internals live in a true private class field.
-// Nothing outside the class can reach them, axe included.
+defineComponent('rv-progress', internals => {
+  internals.role = 'progressbar';
+  internals.ariaValueNow = '40';
+  internals.ariaValueMin = '0';
+  internals.ariaValueMax = '100';
+});
+defineComponent('rv-checkbox', internals => { internals.role = 'checkbox'; });
+defineComponent('rv-heading',  internals => { internals.role = 'heading'; });
+defineComponent('rv-textbox',  internals => { internals.role = 'textbox'; });
+defineComponent('rv-tab',      internals => { internals.role = 'tab'; });
+defineComponent('rv-slider',   internals => { internals.role = 'slider'; });
+defineComponent('rv-combobox', internals => { internals.role = 'combobox'; });
+defineComponent('rv-btn',      internals => { internals.role = 'button'; });
+
+// The odd one out: the internals live in a true private class field, so nothing
+// outside the class can reach them, axe included.
 class RvProgressPrivate extends HTMLElement {
   #internals;
   constructor() {
