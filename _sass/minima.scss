@@ -10,13 +10,15 @@ $base-line-height: 1.5 !default;
 
 $spacing-unit:     30px !default;
 
-$text-color:       #111 !default;
-$background-color: #fdfdfd !default;
-$brand-color:      #2a7ae2 !default;
+// Colours are CSS custom properties so they can change at runtime with the
+// light / dark / system theme. The actual values live in minima/_themes.scss.
+$text-color:       var(--text-color) !default;
+$background-color: var(--background-color) !default;
+$brand-color:      var(--brand-color) !default;
 
-$grey-color:       #828282 !default;
-$grey-color-light: lighten($grey-color, 40%) !default;
-$grey-color-dark:  darken($grey-color, 25%) !default;
+$grey-color:       var(--grey-color) !default;
+$grey-color-light: var(--grey-color-light) !default;
+$grey-color-dark:  var(--grey-color-dark) !default;
 
 $table-text-align: left !default;
 
@@ -45,6 +47,7 @@ $on-laptop:        800px !default;
 
 // Import partials.
 @import
+  "minima/themes",
   "minima/base",
   "minima/layout",
   "minima/syntax-highlighting"
