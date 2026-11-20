@@ -13,6 +13,13 @@ dl, dd, ol, ul, figure {
 /**
  * Basic styling
  */
+
+// INTENTIONAL ISSUE (prefers-reduced-motion): smooth scrolling is applied to
+// everyone, with no `@media (prefers-reduced-motion: reduce)` override.
+html {
+  scroll-behavior: smooth;
+}
+
 body {
   font: $base-font-weight #{$base-font-size}/#{$base-line-height} $base-font-family;
   color: $text-color;
@@ -107,7 +114,7 @@ a {
   text-decoration: none;
 
   &:visited {
-    color: darken($brand-color, 15%);
+    color: var(--brand-color-visited);
   }
 
   &:hover {
@@ -151,6 +158,8 @@ code {
   @include relative-font-size(0.9375);
   border: 1px solid $grey-color-light;
   border-radius: 3px;
+  // INTENTIONAL ISSUE: hard-coded light background. In the dark theme the code
+  // text becomes light grey on this light background.
   background-color: #eef;
 }
 
@@ -232,21 +241,21 @@ table {
   margin-bottom: $spacing-unit;
   width: 100%;
   text-align: $table-text-align;
-  color: lighten($text-color, 18%);
+  color: var(--table-text-color);
   border-collapse: collapse;
   border: 1px solid $grey-color-light;
   tr {
     &:nth-child(even) {
-      background-color: lighten($grey-color-light, 6%);
+      background-color: var(--table-stripe-color);
     }
   }
   th, td {
     padding: ($spacing-unit * 0.3333333333) ($spacing-unit * 0.5);
   }
   th {
-    background-color: lighten($grey-color-light, 3%);
-    border: 1px solid darken($grey-color-light, 4%);
-    border-bottom-color: darken($grey-color-light, 12%);
+    background-color: var(--table-header-color);
+    border: 1px solid var(--table-border-color);
+    border-bottom-color: var(--table-border-bottom-color);
   }
   td {
     border: 1px solid $grey-color-light;

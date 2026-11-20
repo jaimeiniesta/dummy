@@ -1,0 +1,137 @@
+/**
+ * Themes: light, dark and system.
+ *
+ * - `<html data-theme="light">` or `<html data-theme="dark">` forces a theme
+ *   (set by the theme switcher in the header and saved in localStorage).
+ * - With no `data-theme` attribute the site follows the OS / browser setting
+ *   through `prefers-color-scheme`. This is the default, so a headless browser
+ *   that emulates `prefers-color-scheme: dark` gets the dark theme.
+ *
+ * This site is intentionally broken. The dark theme contains several
+ * accessibility issues on purpose — see the "Dark mode issues" post.
+ *
+ * INTENTIONAL ISSUE: there is no `color-scheme` declaration anywhere (no CSS
+ * property and no `<meta name="color-scheme">`), so native form controls and
+ * scrollbars stay light in the dark theme.
+ */
+
+@mixin light-theme {
+  --text-color: #111;
+  --background-color: #fdfdfd;
+  --brand-color: #2a7ae2;
+  --brand-color-visited: #1756a9;
+  --grey-color: #828282;
+  --grey-color-light: #e8e8e8;
+  --grey-color-dark: #424242;
+  --table-text-color: #3f3f3f;
+  --table-stripe-color: #f7f7f7;
+  --table-header-color: #f0f0f0;
+  --table-border-color: #dedede;
+  --table-border-bottom-color: #c9c9c9;
+  --surface-color: #f2f2f2;
+}
+
+@mixin dark-theme {
+  --text-color: #e6e6e6;
+  --background-color: #1b1b1b;
+  // INTENTIONAL ISSUE: the brand colour was not adjusted for the dark
+  // background, and the visited colour is even darker. Low contrast links.
+  --brand-color: #2a7ae2;
+  --brand-color-visited: #1d559e;
+  // INTENTIONAL ISSUE: the grey used for post dates and footer text is far too
+  // dark on the dark background (about 2.6:1).
+  --grey-color: #5c5c5c;
+  --grey-color-light: #333;
+  --grey-color-dark: #bdbdbd;
+  --table-text-color: #d0d0d0;
+  --table-stripe-color: #242424;
+  --table-header-color: #2a2a2a;
+  --table-border-color: #3a3a3a;
+  --table-border-bottom-color: #4a4a4a;
+  --surface-color: #262626;
+}
+
+:root,
+:root[data-theme="light"] {
+  @include light-theme;
+}
+
+:root[data-theme="dark"] {
+  @include dark-theme;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    @include dark-theme;
+  }
+}
+
+/**
+ * Helpers to show content only in one of the themes.
+ */
+.only-dark {
+  display: none;
+}
+
+:root[data-theme="light"] .only-light {
+  display: block;
+}
+
+:root[data-theme="dark"] .only-light {
+  display: none;
+}
+
+:root[data-theme="dark"] .only-dark {
+  display: block;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .only-light {
+    display: none;
+  }
+
+  :root:not([data-theme="light"]) .only-dark {
+    display: block;
+  }
+}
+
+/**
+ * Theme switcher (in the site header)
+ */
+.theme-switcher {
+  float: right;
+  display: flex;
+  gap: 2px;
+  margin: 12px 0 0 20px;
+  padding: 2px;
+  border: 1px solid var(--grey-color-light);
+  border-radius: 6px;
+
+  button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: var(--grey-color);
+    cursor: pointer;
+  }
+
+  // INTENTIONAL ISSUE: the selected option is only indicated by colour.
+  button[aria-pressed="true"] {
+    background: var(--grey-color-light);
+    color: var(--text-color);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 2;
+  }
+}

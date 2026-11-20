@@ -1,0 +1,214 @@
+---
+layout: post
+title:  "Dark mode issues"
+date:   2026-11-20 10:00:00 +0100
+categories: dark-mode prefers-color-scheme media-queries
+---
+
+<style type="text/css">
+  .themes .case {
+    border-left: 4px solid var(--grey-color-light);
+    padding-left: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .themes .expect {
+    background: var(--surface-color);
+    padding: .6rem .8rem;
+    font-size: .9rem;
+  }
+
+  .themes .expect b {
+    font-weight: 600;
+  }
+
+  /* Inline code in the explanations follows the theme, so it does not add noise to the
+     results. Case 6 keeps the site-wide (broken) inline code style on purpose. */
+  .themes > p code,
+  .themes .case:not(#case-6) code {
+    background-color: var(--surface-color);
+    border-color: var(--grey-color-light);
+  }
+
+  /* Canary: only rendered in the dark theme, low contrast on purpose.
+     Uses the .only-dark helper, so it also shows with data-theme="dark". */
+  #dark-mode-canary {
+    background: #1b1b1b;
+    color: #3a3a3a;
+    padding: .6rem .8rem;
+    border: 1px dashed #3a3a3a;
+  }
+
+  /* Case 1: hard-coded background, text colour from the theme */
+  .themes .hardcoded-background {
+    background: #fff8c4;
+    color: var(--text-color);
+    padding: .6rem .8rem;
+  }
+
+  /* Case 2: hard-coded text colour, background from the theme */
+  .themes .hardcoded-text {
+    background: var(--surface-color);
+    color: #f0f0f0;
+    padding: .6rem .8rem;
+  }
+
+  /* Case 5: text colour inherited by a native control that stays light */
+  .themes .inherit-input {
+    color: inherit;
+    font: inherit;
+    padding: .3rem .5rem;
+  }
+
+  .themes .picture {
+    width: 200px;
+    margin: 10px 0;
+    border-radius: 10px;
+  }
+</style>
+
+<div class="themes">
+
+<p>
+  This site has a light theme, a dark theme and a "system" option that follows
+  <code>prefers-color-scheme</code>. System is the default, so a browser that
+  emulates <code>prefers-color-scheme: dark</code> gets the dark theme.
+  Every case below behaves differently depending on the colour scheme. Scan this
+  page with <code>prefers-color-scheme: light</code> and with
+  <code>prefers-color-scheme: dark</code> and compare the results.
+</p>
+
+<div id="dark-mode-canary" class="only-dark">
+  You prefer a dark color scheme.
+</div>
+
+<p class="expect">
+<b>Canary.</b> The box above only exists in the dark theme and its text has low
+contrast on purpose. If the scan reports <code>color-contrast</code> on
+<code>#dark-mode-canary</code>, the preference reached the browser.<br>
+<b>Light:</b> no issue.<br>
+<b>Dark:</b> <code>color-contrast</code> on <code>#dark-mode-canary</code>.
+</p>
+
+<div class="case" id="case-1">
+<h2>1. Hard-coded background, themed text</h2>
+
+<p class="hardcoded-background">
+  This notice has a hard-coded light yellow background, but its text colour
+  comes from the theme. In the dark theme it becomes light text on a light
+  background.
+</p>
+
+<p class="expect">
+<b>Light:</b> no issues.<br>
+<b>Dark:</b> <code>color-contrast</code> on the notice.
+</p>
+</div>
+
+<div class="case" id="case-2">
+<h2>2. Hard-coded text, themed background</h2>
+
+<p class="hardcoded-text">
+  This box was designed in dark mode: its text colour is a hard-coded light
+  grey, while the background follows the theme.
+</p>
+
+<p class="expect">
+<b>Light:</b> <code>color-contrast</code> on the box.<br>
+<b>Dark:</b> no issues.
+</p>
+</div>
+
+<div class="case" id="case-3">
+<h2>3. Content that only exists in the dark theme</h2>
+
+<div class="only-dark">
+  <p>Night owls get a special mascot and a link to their profile:</p>
+  <img src="/assets/img/chicken.png" class="picture">
+  <p><a href="/about/"><img src="/assets/img/menu-icon.png" width="24" height="24"></a></p>
+</div>
+
+<p class="expect">
+<b>Light:</b> no issues — the block is <code>display: none</code>.<br>
+<b>Dark:</b> <code>image-alt</code> on the chicken, <code>link-name</code> and
+<code>image-alt</code> on the icon link.
+</p>
+</div>
+
+<div class="case" id="case-4">
+<h2>4. Content that only exists in the light theme</h2>
+
+<div class="only-light">
+  <p>Early birds get a sunny goldfish:</p>
+  <img src="/assets/img/goldfish.jpg" class="picture">
+</div>
+
+<p class="expect">
+<b>Light:</b> <code>image-alt</code> on the goldfish.<br>
+<b>Dark:</b> no issues — the block is <code>display: none</code>.
+</p>
+</div>
+
+<div class="case" id="case-5">
+<h2>5. Form controls without <code>color-scheme</code></h2>
+
+<p>
+  The site never declares <code>color-scheme</code>, so the browser keeps drawing
+  native form controls with a light background. This field inherits the page text
+  colour.
+</p>
+
+<p>
+  <label for="nickname">Nickname</label><br>
+  <input type="text" id="nickname" class="inherit-input" value="Dark mode fan">
+</p>
+
+<p class="expect">
+<b>Light:</b> no issues.<br>
+<b>Dark:</b> light text on a white field. Axe reports <code>color-contrast</code>
+on the input.
+</p>
+</div>
+
+<div class="case" id="case-6">
+<h2>6. Theme colours not adjusted for the dark background (site-wide)</h2>
+
+<p>
+  These styles come from the site stylesheet, so they affect every page. Inline
+  code like <code>prefers-color-scheme</code> keeps its hard-coded light
+  background, and so do highlighted code blocks:
+</p>
+
+{% highlight css %}
+@media (prefers-color-scheme: dark) {
+  body { background: #1b1b1b; }
+}
+{% endhighlight %}
+
+<p>
+  Links like <a href="/faq/">the FAQ</a> keep the blue designed for a white
+  background, and the post date and footer use a grey that is too dark.
+</p>
+
+<p class="expect">
+<b>Light:</b> link, post date and footer contrast issues that minima already had.<br>
+<b>Dark:</b> additional <code>color-contrast</code> issues on inline code and code
+blocks, and lower contrast on links, the post date and the footer.
+</p>
+</div>
+
+<div class="case" id="case-7">
+<h2>7. The theme switcher (site-wide)</h2>
+
+<p>
+  The light / dark / system switcher in the header is on every page. Its buttons
+  only contain an icon, so they have no accessible name, the group has no label,
+  and the selected option is only shown with colour.
+</p>
+
+<p class="expect">
+<b>Light and dark:</b> <code>button-name</code> on the three buttons.
+</p>
+</div>
+
+</div>

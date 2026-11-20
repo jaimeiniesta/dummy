@@ -1,0 +1,299 @@
+---
+layout: post
+title:  "Reduced motion issues"
+date:   2026-11-20 10:30:00 +0100
+categories: reduced-motion prefers-reduced-motion media-queries
+---
+
+<style type="text/css">
+  .motion .case {
+    border-left: 4px solid var(--grey-color-light);
+    padding-left: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .motion .expect {
+    background: var(--surface-color);
+    padding: .6rem .8rem;
+    font-size: .9rem;
+  }
+
+  .motion .expect b {
+    font-weight: 600;
+  }
+
+  /* Inline code in the explanations follows the theme, so it does not add noise. */
+  .motion code {
+    background-color: var(--surface-color);
+    border-color: var(--grey-color-light);
+  }
+
+  /* Case 1: animations that ignore prefers-reduced-motion */
+  .motion .spinner {
+    display: inline-block;
+    width: 32px;
+    height: 32px;
+    border: 4px solid #ccc;
+    border-top-color: #2a7ae2;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    vertical-align: middle;
+  }
+
+  .motion .bouncing {
+    display: inline-block;
+    animation: bounce 1.2s ease-in-out infinite;
+  }
+
+  /* Case 2: inverted media query — animates ONLY when the user asks for less motion */
+  @media (prefers-reduced-motion: reduce) {
+    .motion .wobble {
+      display: inline-block;
+      animation: wobble 1.5s ease-in-out infinite;
+    }
+  }
+
+  /* Case 3: content that only exists when motion is allowed */
+  .motion .ticker-box {
+    overflow: hidden;
+    white-space: nowrap;
+    background: #f5f5f5;
+    padding: .4rem 0;
+  }
+
+  .motion .ticker {
+    display: inline-block;
+    padding-left: 100%;
+    color: #c4c4c4;
+    animation: ticker 12s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .motion .motion-only {
+      display: none;
+    }
+  }
+
+  /* Case 4: content that only exists when the user asks for reduced motion */
+  .motion .reduced-only {
+    display: none;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .motion .reduced-only {
+      display: block;
+    }
+  }
+
+  .motion .fallback-note {
+    background: #fdfdfd;
+    color: #bbb;
+  }
+
+  .motion .picture {
+    width: 200px;
+    margin: 10px 0;
+    border-radius: 10px;
+  }
+
+  /* Case 5: auto-advancing carousel */
+  .motion .carousel {
+    position: relative;
+    overflow: hidden;
+    height: 6rem;
+    background: #f5f5f5;
+    color: #111;
+  }
+
+  .motion .carousel-track {
+    display: flex;
+    transition: transform .8s ease-in-out;
+  }
+
+  .motion .carousel-slide {
+    flex: 0 0 100%;
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+
+  /* Canary: only rendered with prefers-reduced-motion: reduce, low contrast on purpose */
+  #reduced-motion-canary {
+    display: none;
+    background: #fdfdfd;
+    color: #c8c8c8;
+    padding: .6rem .8rem;
+    border: 1px dashed #c8c8c8;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    #reduced-motion-canary {
+      display: block;
+    }
+  }
+
+  @keyframes spin {
+    to { transform: rotate(360deg); }
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+
+  @keyframes wobble {
+    0%, 100% { transform: rotate(0); }
+    25% { transform: rotate(-8deg); }
+    75% { transform: rotate(8deg); }
+  }
+
+  @keyframes ticker {
+    from { transform: translateX(0); }
+    to { transform: translateX(-100%); }
+  }
+</style>
+
+<div class="motion">
+
+<div id="reduced-motion-canary">
+  You prefer reduced motion.
+</div>
+
+<p class="expect">
+<b>Canary.</b> The box above only exists with <code>prefers-reduced-motion: reduce</code>
+and its text has low contrast on purpose. If the scan reports
+<code>color-contrast</code> on <code>#reduced-motion-canary</code>, the preference
+reached the browser.<br>
+<b>No preference:</b> no issue.<br>
+<b>Reduce:</b> <code>color-contrast</code> on <code>#reduced-motion-canary</code>.
+</p>
+
+<p>
+  Every case below gets <code>prefers-reduced-motion</code> wrong. Some of them
+  change what is rendered depending on the setting, so scan this page with
+  <code>prefers-reduced-motion: no-preference</code> and with
+  <code>prefers-reduced-motion: reduce</code> and compare the results. Others
+  ignore the setting completely; automated tools can't see those, but they are
+  here for manual review.
+</p>
+
+<div class="case" id="case-1">
+<h2>1. Animations that ignore the preference</h2>
+
+<p>
+  <span class="spinner"></span>
+  Loading forever, and <span class="bouncing">this text keeps bouncing</span>.
+  Neither animation has a <code>prefers-reduced-motion</code> override.
+</p>
+
+<p class="expect">
+<b>No preference and reduce:</b> the content moves in both cases. No automated
+rule catches this; it is a manual check (WCAG 2.2.2 Pause, Stop, Hide and
+2.3.3 Animation from Interactions).
+</p>
+</div>
+
+<div class="case" id="case-2">
+<h2>2. Inverted media query</h2>
+
+<p>
+  <span class="wobble">This text only wobbles for people who asked for reduced
+  motion.</span> The animation was written inside
+  <code>@media (prefers-reduced-motion: reduce)</code> instead of
+  <code>no-preference</code>.
+</p>
+
+<p class="expect">
+<b>No preference:</b> static.<br>
+<b>Reduce:</b> animated. No automated rule catches this; it is a manual check.
+</p>
+</div>
+
+<div class="case" id="case-3">
+<h2>3. Content that only exists when motion is allowed</h2>
+
+<div class="motion-only">
+  <div class="ticker-box">
+    <span class="ticker">Breaking news: this scrolling ticker is very hard to read.</span>
+  </div>
+  <marquee>Old school scrolling text with the obsolete marquee element.</marquee>
+</div>
+
+<p class="expect">
+<b>No preference:</b> <code>color-contrast</code> on the ticker and
+<code>marquee</code> on the marquee element.<br>
+<b>Reduce:</b> no axe issues — the block is <code>display: none</code>.
+The HTML validator reports the obsolete <code>marquee</code> element either way,
+because it doesn't depend on media queries.
+</p>
+</div>
+
+<div class="case" id="case-4">
+<h2>4. Content that only exists when reduced motion is requested</h2>
+
+<p>
+  The developers replaced the ticker with a static banner for people who prefer
+  reduced motion, and forgot to check it.
+</p>
+
+<div class="reduced-only">
+  <p class="fallback-note">Static version of the news banner, shown because you prefer reduced motion.</p>
+  <img src="/assets/img/goldfish.jpg" class="picture">
+  <p><a href="/faq/"><img src="/assets/img/menu-icon.png" width="24" height="24"></a></p>
+</div>
+
+<p class="expect">
+<b>No preference:</b> no issues — the block is <code>display: none</code>.<br>
+<b>Reduce:</b> <code>color-contrast</code> on the note, <code>image-alt</code> on
+the goldfish, <code>link-name</code> and <code>image-alt</code> on the icon link.
+</p>
+</div>
+
+<div class="case" id="case-5">
+<h2>5. JavaScript that ignores the preference</h2>
+
+<p>
+  This carousel advances every three seconds with a sliding transition. It never
+  checks <code>matchMedia("(prefers-reduced-motion: reduce)")</code> and has no
+  pause button.
+</p>
+
+<div class="carousel">
+  <div class="carousel-track">
+    <div class="carousel-slide">Slide 1: Rocket Validator checks whole sites.</div>
+    <div class="carousel-slide">Slide 2: it finds HTML and accessibility issues.</div>
+    <div class="carousel-slide">Slide 3: this carousel never stops moving.</div>
+  </div>
+</div>
+
+<p>
+  <button type="button" id="back-to-top">Back to top</button>
+  scrolls with <code>behavior: "smooth"</code>, and the whole site sets
+  <code>scroll-behavior: smooth</code> on <code>html</code> without a reduced
+  motion override.
+</p>
+
+<p class="expect">
+<b>No preference and reduce:</b> the carousel and the smooth scrolling run in both
+cases. No automated rule catches this; it is a manual check (WCAG 2.2.2 Pause,
+Stop, Hide).
+</p>
+</div>
+
+</div>
+
+<script>
+  (function () {
+    var track = document.querySelector(".motion .carousel-track");
+    var slides = track.children.length;
+    var current = 0;
+
+    setInterval(function () {
+      current = (current + 1) % slides;
+      track.style.transform = "translateX(-" + (current * 100) + "%)";
+    }, 3000);
+
+    document.getElementById("back-to-top").addEventListener("click", function () {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    });
+  })();
+</script>

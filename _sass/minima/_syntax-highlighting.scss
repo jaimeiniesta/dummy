@@ -2,6 +2,7 @@
  * Syntax highlighting styles
  */
 .highlight {
+  // INTENTIONAL ISSUE: hard-coded light backgrounds that ignore the dark theme.
   background: #fff;
   @extend %vertical-rhythm;
 
